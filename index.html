@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ページネーション</title>
+
+    <style type="text/css">
+        input[type="number"] {width:40px;}
+        table {margin:10px 0; border-collapse: collapse;}
+        th,td {border: 1px solid #444; padding: 5px; text-align: center;}
+        .pagination td {width: 30px;}
+        .active {background-color: cornflowerblue; color: #fff;}
+    </style>
+
+</head>
+
+<body>
+    <div id="myapp">
+        検索：<input type="text" v-model="keyword">
+        <p>{{lastPage}} ページ中 <input type="number" v-model="page" min="1" v-bind:max="lastPage"> ページ目を <input type="number" v-model="dispLength" min="1"> 件表示。pos={{pos}}</p>
+        <table class="pagination">
+            <tr>
+                <td><span @click="page=1" v-if="page!=1">«</span></td>
+                <td><span @click="page--" v-if="page!=1">&lt;</span></td>
+                <td @click="showPage(index+pos)" v-for="index in pageCount" v-bind:class="{active: page == index+pos}">{{index+pos}}</td>
+                <td><span @click="page++" v-if="page!=lastPage">&gt; </span></td>
+                <td><span @click="page=lastPage" v-if="page!=lastPage">»</span></td>
+            </tr>
+        </table>
+        <table>
+            <thead>
+                <tr>
+                    <th v-for="key in fields" @click="sortBy(key)">{{key}} {{status[key]}}</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="item in dispItems">
+                    <td v-for="key in fields">{{item[key]}}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script src="datajson.js"></script>
+
+    <!-- Vue.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script>
+var myapp = new Vue({
+    el: '#myapp',
+    
+    data: {
+        page: 1,
+        dispLength: 10,
+        items: items,
+        keyword: '',
+        pos: 0,
+        fields: fields,
+        sorts: [],
+        status: [],
+    },
+    methods: {
+        showPage: function(index) {
+            this.page = index;
+        },
+        sortBy: function(key) {
+            this.status = [];
+            if(this.sorts[key] != 1) {
+                this.sorts[key] = 1;
+                this.status[key] = '∨';
+            } else {
+                this.sorts[key] = -1;
+                this.status[key] = '∧';
+            }
+            this.items.sort((a,b) => {
+                return (a[key] < b[key]) ? -this.sorts[key] : (a[key] > b[key]) ? this.sorts[key] : 0;
+            });
+        },
+    },
+    computed: {
+        filteredItems: function() {
+            this.page = 1;
+            var fItems = [];
+            var chk = [];
+            for(var i in this.items) {
+                var item = this.items[i];
+                for(key in this.fields) {
+                    var field_name = this.fields[key];
+                    if(String(item[field_name]).indexOf(this.keyword) !== -1) {
+                        chk[i] = 1;
+                    }
+                }
+                if(chk[i] == 1) {
+                    fItems.push(items[i]);
+                }
+            }
+            return fItems;
+        },
+        lastPage: function() {
+            return Math.ceil(this.filteredItems.length / this.dispLength)
+        },
+        dispItems: function() {
+            var startID = (this.page - 1) * this.dispLength;
+            return this.filteredItems.slice(startID, startID + this.dispLength);
+        },
+        pageCount: function() {
+            return this.lastPage - this.pos > 10 ? 10 : this.lastPage - this.pos;
+        }
+    },
+    watch: {
+        page: function() {
+            if(this.page <= 5) {
+                this.pos = 0;
+            }
+            if(5 < this.page && this.page <= this.lastPage - 5) {
+                this.pos = this.page - 5;
+            }
+            if(this.lastPage - 5 < this.page && this.page < this.lastPage) {
+                this.pos = this.lastPage - this.pageCount;
+            }
+            if(this.lastPage == this.page) {
+                this.pos = this.page - this.pageCount;
+            }
+        },
+    }
+})
+    </script>
+</body>
+</html>
